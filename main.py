@@ -7,9 +7,8 @@ from qdrant_client.models import VectorParams, Distance
 import uuid
 import config
 
-# -------------------------------
+
 # Helper: Convert DataFrame → Text Docs
-# -------------------------------
 def dataframe_to_docs(df: pd.DataFrame):
     docs = []
     for _, row in df.iterrows():
@@ -29,9 +28,8 @@ def dataframe_to_docs(df: pd.DataFrame):
     return docs
 
 
-# -------------------------------
+
 # Load property data from file (CSV or JSON)
-# -------------------------------
 def load_property_docs(file_path):
     _, ext = os.path.splitext(file_path.lower())
     if ext == ".csv":
@@ -43,41 +41,29 @@ def load_property_docs(file_path):
     return dataframe_to_docs(df)
 
 
-# -------------------------------
+
 # Embeddings + Qdrant setup
-# -------------------------------
 embeddings = OpenAIEmbeddings(
     model=config.EMBEDDING_MODEL,
     openai_api_key=config.OPENAI_API_KEY,
 )
 qdrant = QdrantClient(url=config.QDRANT_URL, api_key=config.QDRANT_API_KEY)
 
-# Try loading default dataset only if it exists
-property_docs = None
-if os.path.exists(config.CSV_PATH):
-    print(f"📄 Loading default dataset from {config.CSV_PATH}")
-    property_docs = load_property_docs(config.CSV_PATH)
-else:
-    print("⚠️ No default data file found — will load from uploaded file later.")
+print("✅ RAG system initialized. Ready to index uploaded data.")
 
 
-# -------------------------------
+
 # Create or connect to Qdrant collection
-# -------------------------------
 if config.COLLECTION_NAME not in [c.name for c in qdrant.get_collections().collections]:
+    print(f"🔄 Creating new collection: {config.COLLECTION_NAME}")
     qdrant.recreate_collection(
         collection_name=config.COLLECTION_NAME,
         vectors_config=VectorParams(size=config.EMBEDDING_DIM, distance=Distance.COSINE),
     )
-    if property_docs:
-        all_embeddings = embeddings.embed_documents(property_docs)
-        payload = [{"text": doc} for doc in property_docs]
-        ids = [str(uuid.uuid4()) for _ in property_docs]
-        qdrant.upload_collection(config.COLLECTION_NAME, all_embeddings, payload, ids)
+    print("✅ Collection created. Use notebook or API to upload data.")
 
-# -------------------------------
+
 # Vectorstore and Retrieval setup
-# -------------------------------
 vectorstore = QdrantVectorStore(
     client=qdrant, collection_name=config.COLLECTION_NAME, embedding=embeddings
 )
@@ -130,9 +116,8 @@ Answer:"""
     }
 
 
-# -------------------------------
+
 # Index Building Functions
-# -------------------------------
 def build_index_from_docs(docs):
     if not docs:
         print("⚠️ No documents provided for indexing.")
@@ -169,11 +154,6 @@ def clear_and_rebuild_collection():
         vectors_config=VectorParams(size=config.EMBEDDING_DIM, distance=Distance.COSINE),
     )
     
-    print("📝 Rebuilding index...")
-    if os.path.exists(config.CSV_PATH):
-        docs = load_property_docs(config.CSV_PATH)
-        build_index_from_docs(docs)
-    else:
-        print("⚠️ No default data file found.")
+    print("✅ Collection cleared. Ready for new data to be indexed.")
 
-# Note: This module only defines functions and chains — it doesn’t start a server.
+
