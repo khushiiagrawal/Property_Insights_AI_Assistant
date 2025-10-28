@@ -1,0 +1,10 @@
+langchain
+langchain-openai
+langchain-community
+langchain-qdrant
+qdrant-client
+openai
+pandas
+flask
+python-dotenv
+ipywidgets
