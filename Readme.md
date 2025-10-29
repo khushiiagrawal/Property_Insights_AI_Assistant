@@ -34,7 +34,7 @@ User Upload (Jupyter) → Data Processing → OpenAI Embeddings
 
 ---
 
-## 🚀 Quick Start
+## 💻 Quick Start
 
 ### 1. **Clone & Setup**
 
