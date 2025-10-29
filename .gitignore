@@ -72,8 +72,6 @@ htmlcov/
 .tox/
 
 # Project specific
-*.csv
-*.json
 !requirements.json
 !package.json
 
