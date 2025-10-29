@@ -95,7 +95,8 @@ Question: {query}
 Instructions:
 - If you can answer the question using the data above, provide a clear, specific answer
 - If calculating averages, totals, or other statistics, show your work
-- If the answer is not in the data, say "I don't have enough information to answer this question"
+- If the question asks about a specific year/time period not in the data, explain what years ARE available
+- If the data is insufficient, be specific about what's missing (e.g., "No data found for year 2005")
 
 Answer:"""
     
@@ -126,12 +127,33 @@ def build_index_from_docs(docs):
     print(f"📝 Indexing {len(docs)} documents...")
     print(f"Sample doc: {docs[0][:100]}...")
     
-    all_embeddings = embeddings.embed_documents(docs)
-    # Store text in 'page_content' field for proper retrieval
-    payload = [{"page_content": doc, "text": doc} for doc in docs]
-    ids = [str(uuid.uuid4()) for _ in docs]
-    qdrant.upload_collection(config.COLLECTION_NAME, all_embeddings, payload, ids)
-    print("✅ Documents indexed successfully!")
+    # Process in batches to avoid token limits
+    batch_size = 50  # Process 50 documents at a time (faster!)
+    total_batches = (len(docs) + batch_size - 1) // batch_size
+    
+    for i in range(0, len(docs), batch_size):
+        batch_docs = docs[i:i + batch_size]
+        batch_num = (i // batch_size) + 1
+        
+        print(f"  Processing batch {batch_num}/{total_batches} ({len(batch_docs)} docs)...")
+        
+        # Generate embeddings for this batch
+        batch_embeddings = embeddings.embed_documents(batch_docs)
+        
+        # Store text in 'page_content' field for proper retrieval
+        payload = [{"page_content": doc, "text": doc} for doc in batch_docs]
+        ids = [str(uuid.uuid4()) for _ in batch_docs]
+        
+        # Upload this batch to Qdrant (with wait=True to ensure indexing completes)
+        qdrant.upload_collection(
+            config.COLLECTION_NAME, 
+            batch_embeddings, 
+            payload, 
+            ids,
+            wait=True  # Wait for indexing to complete
+        )
+    
+    print(f"✅ Successfully indexed {len(docs)} documents!")
 
 
 def build_index_from_df(df: pd.DataFrame):
